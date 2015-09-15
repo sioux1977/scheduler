@@ -17,7 +17,7 @@ import java.util.logging.Logger;
  * $Id: $
  * $Log: $
  *
- * @author sfreddio
+ * @author Simone Freddio <sioux1977@gmail.com>
  */
 public class Job extends TimerTask {
     private static final Logger log = Logger.getLogger(Job.class.getName());

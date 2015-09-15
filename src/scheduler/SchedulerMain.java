@@ -21,7 +21,7 @@ import java.util.logging.SimpleFormatter;
  * $Id: $
  * $Log: $
  *
- * @author sfreddio
+ * @author Simone Freddio <sioux1977@gmail.com>
  */
 public class SchedulerMain {
 

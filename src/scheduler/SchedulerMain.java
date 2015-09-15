@@ -26,6 +26,8 @@ import java.util.logging.SimpleFormatter;
 public class SchedulerMain {
 
     private static final String CONFIGFILE = "scheduler.conf";
+    private static final int LOGLIMIT = 1024*1024*10;
+    private static final int LOGCOUNT = 10;
     private static final Logger log = Logger.getLogger(SchedulerMain.class.getName());
     
     /**
@@ -77,7 +79,7 @@ public class SchedulerMain {
         for (Handler h: anon.getHandlers()) {
             anon.removeHandler(h);
         }
-        FileHandler fh = new FileHandler(config.getProperty("log", "/var/log/scheduler.log"), true);
+        FileHandler fh = new FileHandler(config.getProperty("log", "/var/log/scheduler.log"), LOGLIMIT, LOGCOUNT, true);
         fh.setLevel(Level.ALL);
         fh.setFormatter(new SimpleFormatter());
         global.addHandler(fh);

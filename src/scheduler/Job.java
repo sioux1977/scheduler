@@ -6,6 +6,8 @@
 
 package scheduler;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -28,13 +30,21 @@ public class Job extends TimerTask {
     private String cmdline;
     private long period;
     private boolean alivecheck;
+    private final String logfile;
+    private long logfileLastSize = -1;
+    private long logfileLastSizeTimestamp = -1;
+    private final long logfileCheckPeriod;
+    private final String auxiliaryKillCmd;
     
 
-    public Job(String name, String cmdline, long period, boolean alivecheck) {
+    public Job(String name, String cmdline, long period, boolean alivecheck, String logfile, long logfileCheckPeriod, String auxiliaryKillCmd) {
         this.cmdline = cmdline;
         this.period = period;
         this.alivecheck = alivecheck;
         this.name = name;
+        this.logfile = logfile;
+        this.logfileCheckPeriod = logfileCheckPeriod;
+        this.auxiliaryKillCmd = auxiliaryKillCmd;
     }
     
     public void start() {
@@ -56,6 +66,29 @@ public class Job extends TimerTask {
                 log.fine("Job "+name+" process is dead, exitcode: "+exitcode);
             } catch (IllegalThreadStateException ex) {
                 log.fine("Job "+name+" process still running...");
+                if (logfile != null) {
+                    log.fine("Job "+name+" checking log file size");
+                    try {
+                        if (checkLogFileGrowing()) {
+                            log.fine("Job "+name+" log file is growing, process is alive and running");
+                        } else {
+                            log.warning("Job "+name+" log file is NOT growing, killing hanged process");
+                            proc.destroy();
+                            if (auxiliaryKillCmd != null) {
+                                log.fine("Job "+name+": launching auxiliary kill");
+                                try {
+                                    auxiliaryKill();
+                                } catch (IOException ex1) {
+                                    log.log(Level.WARNING, "Job "+name+": exception during auxiliary kill", ex);
+                                }
+                            }
+                            exitcode = -9999;
+                            log.fine("Job "+name+" process destoyed forcibly");
+                        }
+                    } catch (FileNotFoundException ex1) {
+                        log.warning("Job "+name+": log file not found");
+                    }
+                }
             }
             
             if (alivecheck && exitcode == null) {
@@ -88,6 +121,42 @@ public class Job extends TimerTask {
             cmdline
         };
         proc = rt.exec(cmd);
+    }
+    
+    private void auxiliaryKill() throws IOException {
+        Runtime rt = Runtime.getRuntime();
+        String cmd[] = new String[] {
+            "/bin/bash",
+            "-c",
+            auxiliaryKillCmd
+        };
+        proc = rt.exec(cmd);
+    }
+
+    private boolean checkLogFileGrowing() throws FileNotFoundException {
+        File f = new File(logfile);
+        if (f.exists()) {
+            long fileSize = f.length();
+            log.fine("Job "+name+": log file size is "+fileSize);
+            if (logfileLastSize == -1) {
+                logfileLastSize = fileSize;
+                logfileLastSizeTimestamp = System.currentTimeMillis();
+            }
+            if (logfileLastSize == fileSize) {
+                long elapsed = System.currentTimeMillis() - logfileLastSizeTimestamp;
+                if (elapsed > logfileCheckPeriod) {
+                    // log file is not growing
+                    return false;
+                }
+            } else {
+                // log file is growing, update saved size and timestamp
+                logfileLastSize = fileSize;
+                logfileLastSizeTimestamp = System.currentTimeMillis();
+            }
+            return true;
+        } else {
+            throw new FileNotFoundException("file "+logfile+" didn't exists");
+        }
     }
     
 }

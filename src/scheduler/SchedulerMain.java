@@ -53,8 +53,12 @@ public class SchedulerMain {
             Long period = Long.parseLong(config.getProperty(prefix+".period"));
             Boolean alivecheck = config.getProperty(prefix+".alivecheck", "0").compareToIgnoreCase("1") == 0;
             
-            log.info("Creating Job "+i+" - name '"+name+"' period: "+period+"ms alivecheck:"+alivecheck+" cmd:"+cmd);
-            Job j = new Job(name, cmd, period, alivecheck);
+            String logfile = config.getProperty(prefix+".logfile");
+            Long logfileCheckPeriod = Long.parseLong(config.getProperty(prefix+".logfile.period", "-1"));
+            String auxKillCmd = config.getProperty(prefix+".kill.cmd");
+            
+            log.info("Creating Job "+i+" - name '"+name+"' period: "+period+"ms alivecheck:"+alivecheck+" cmd:"+cmd+" logfile:"+logfile+" (cehck period: "+logfileCheckPeriod+")");
+            Job j = new Job(name, cmd, period, alivecheck, logfile, logfileCheckPeriod, auxKillCmd);
             j.start();
             log.info("Job "+i+" started");
         }
